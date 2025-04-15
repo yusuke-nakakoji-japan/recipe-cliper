@@ -6,6 +6,12 @@ YouTubeの料理動画からレシピを抽出し、NotionのDBに格納する�
 
 Recipe Cliperは、YouTube動画の字幕からレシピ情報を自動的に抽出し、Notionデータベースに整理して保存するツールです。AI技術を活用して動画コンテンツからレシピの材料や手順を抽出し、レシピコレクションを簡単に管理できます。
 
+## Google A2A（Agent to Agent）プロトコル採用
+
+Recipe Cliperは、Google社が提供する[A2A（Agent to Agent）](https://github.com/google/A2A)オープンプロトコルを採用しています。
+A2Aプロトコルによりエージェント間の効率的な連携と情報のやり取りを実現し、複雑なワークフローを自動化しています。
+各エージェント（YouTube、Recipe、Notion）は独立したAIアプリケーションとして動作しながらも、A2Aプロトコルを通じてシームレスに連携し、一連のタスクを自動的に処理します。
+
 ## 機能
 
 - YouTube動画URLからの自動字幕抽出
