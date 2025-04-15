@@ -1,0 +1,20 @@
+[project]
+name = "notion-agent"
+version = "0.1.0"
+description = "Notion Integration Agent for A2A Protocol"
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "~3.12"
+notion-client = ">=2.3.0,<3.0.0"
+python-dotenv = ">=1.1.0,<2.0.0"
+flask = "^3.1.0"
+requests = "^2.31.0"
+waitress = "^2.1.2"

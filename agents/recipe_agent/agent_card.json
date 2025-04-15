@@ -1,0 +1,92 @@
+{
+  "name": "Recipe Extractor Agent",
+  "description": "An advanced agent that extracts structured recipe information from transcribed text of cooking videos using Gemini API. It identifies ingredients, instructions, difficulty level, and cuisine categories, and can forward the data to Notion for storage.",
+  "url": "http://localhost:5001",
+  "provider": {
+    "name": "Recipe Scraper Project",
+    "website": "https://recipe-scraper.example.com"
+  },
+  "version": "0.2.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "autonomousCommunication": true,
+    "querySkill": true,
+    "contentStructuring": true
+  },
+  "authentication": null,
+  "defaultInputModes": ["text", "data"],
+  "defaultOutputModes": ["text", "json", "data"],
+  "skills": [
+    {
+      "name": "recipe_extraction",
+      "description": "Extracts structured recipe information (ingredients, instructions, difficulty, category) from transcribed text of cooking videos, optimized for both Japanese and English content",
+      "inputModes": ["text", "data"],
+      "outputModes": ["json", "data"],
+      "supportedLanguages": ["ja", "en"],
+      "parameters": {
+        "youtube_url": "URL of the source YouTube video (required)",
+        "channel_name": "Optional name of the YouTube channel",
+        "thumbnail_url": "Optional URL of the video thumbnail",
+        "transcript_text": "Transcribed text of the video (required)",
+        "extract_options": "Optional configuration for extraction behavior (e.g., {\"detect_servings\": true, \"include_nutrition\": false})"
+      },
+      "outputFormat": {
+        "recipe_name": "String - Name of the recipe",
+        "category": "String - Cuisine category (e.g., Italian, Japanese)",
+        "difficulty": "String - Recipe difficulty level (Easy, Medium, Hard)",
+        "ingredients": "Array - List of ingredients with amounts",
+        "instructions": "Array - Step-by-step cooking instructions",
+        "youtube_url": "String - Source YouTube video URL",
+        "estimated_time": "String - Estimated cooking time (if available)",
+        "servings": "Number - Number of servings (if available)"
+      }
+    },
+    {
+      "name": "recipe_analysis",
+      "description": "Analyzes recipe complexity, categorization, and structure with detailed insights",
+      "inputModes": ["text", "json"],
+      "outputModes": ["data", "json"],
+      "supportedFeatures": ["difficulty_assessment", "cuisine_categorization", "time_estimation", "nutrition_approximation"],
+      "parameters": {
+        "recipe_data": "Recipe data in JSON format or raw text (required)",
+        "analysis_depth": "Level of analysis detail (basic, standard, detailed) - default: standard"
+      }
+    },
+    {
+      "name": "forward_to_notion",
+      "description": "Forwards extracted recipe data to Notion agent for database registration with automatic formatting",
+      "inputModes": ["json", "data"],
+      "outputModes": ["text", "data", "uri-list"],
+      "parameters": {
+        "recipe_data": "Extracted recipe data in JSON format (required)",
+        "notion_agent_url": "URL of the Notion agent (default: http://localhost:5002)"
+      }
+    }
+  ],
+  "documentation": {
+    "usage_examples": [
+      {
+        "title": "Basic Recipe Extraction",
+        "description": "Extract recipe details from transcribed cooking video",
+        "input": {
+          "youtube_url": "https://www.youtube.com/watch?v=example",
+          "transcript_text": "Today we'll make pasta carbonara. You'll need pasta, eggs, pancetta..."
+        }
+      },
+      {
+        "title": "Recipe Analysis with Detailed Output",
+        "description": "Analyze recipe complexity with detailed output",
+        "input": {
+          "recipe_data": "{\"recipe_name\": \"Pasta Carbonara\", \"ingredients\": [...]}",
+          "analysis_depth": "detailed"
+        }
+      }
+    ],
+    "error_handling": {
+      "insufficient_content": "Returns partial data with confidence scores if recipe information is incomplete",
+      "non_recipe_content": "Returns error with detection confidence if content is not a recipe",
+      "language_unsupported": "Attempts best-effort extraction with warning"
+    }
+  }
+} 

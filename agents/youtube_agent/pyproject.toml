@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "recipe-scraper"  # ディレクトリ名に合わせる
+version = "0.1.0"
+description = "A2A agent for transcribing YouTube videos using Whisper"
+readme = "README.md"
+packages = [{include = "agent"}]
+
+[tool.poetry.dependencies]
+python = "^3.12"  # Dockerfileのバージョンと合わせる
+Flask = "^3.0.0"
+youtube-transcript-api = "^0.6.2"
+faster-whisper = "^1.0.3"
+yt-dlp = "^2025.3.31"
+google-generativeai = "^0.5.0" # Gemini API client library (Updated version)
+python-dotenv = "^1.0.0" # To load .env file
+waitress = "^2.1.2" # 本番環境向けWSGIサーバー
+hf_xet = "*" # Hugging Faceのモデルダウンロードを最適化（バージョン指定なし）
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.4.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api" 

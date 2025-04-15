@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RecipeCliper - YouTubeレシピ自動保存ツール</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">✂️</span>
+                <h1>Recipe<span class="accent">Cliper</span></h1>
+            </div>
+            <p class="subtitle">YouTube料理動画からレシピを自動抽出してNotionに保存</p>
+        </header>
+
+        <main>
+            <section class="input-section">
+                <form id="url-form" autocomplete="off">
+                    <div class="form-group">
+                        <label for="youtube_url">動画URLを入力</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="youtube_url" name="youtube_url" placeholder="Youtubeの動画URLを入力してください..." required autocomplete="off">
+                            <button type="submit" id="submit-btn">クリップする</button>
+                        </div>
+                    </div>
+                </form>
+            </section>
+
+            <section class="status-section" id="status-container" style="display: none;">
+                <div class="status-message" id="status-message">処理中です...</div>
+            </section>
+
+            <section class="result-section" id="result-container" style="display: none;">
+                <div class="result-success" id="result-success" style="display: none;">
+                    <h2>クリップ完了！</h2>
+                    <p>レシピがNotionに正常に保存されました</p>
+                    <button id="new-clip-btn" class="button button-secondary">別の料理動画をクリップする</button>
+                </div>
+                <div class="result-error" id="result-error" style="display: none;">
+                    <h2>エラーが発生しました</h2>
+                    <p id="error-message"></p>
+                    <button id="retry-btn" class="button button-secondary">やり直す</button>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; RecipeCliper</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

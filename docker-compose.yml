@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  youtube-agent:
+    build:
+      context: ./agents/youtube_agent
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    volumes: []
+    environment:
+      - PYTHONUNBUFFERED=1 # Dockerログの出力を確実にするため
+      - DOCKER_ENV=true # Docker環境内であることを明示的に通知
+    networks:
+      - a2a-network
+
+  recipe-extractor:
+    build:
+      context: ./agents/recipe_agent
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    volumes: []
+    env_file:
+      - .env # .env ファイルから環境変数を読み込む (GEMINI_API_KEY)
+    environment:
+      - PYTHONUNBUFFERED=1 # ログ出力用
+      - DOCKER_ENV=true # Docker環境内であることを明示的に通知
+    networks:
+      - a2a-network
+
+  notion-agent: # New service for Notion integration
+    build:
+      context: ./agents/notion_agent
+      dockerfile: Dockerfile
+    ports:
+      - "5002:5002"
+    env_file:
+      - .env # For NOTION_API_KEY and NOTION_DATABASE_ID
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DOCKER_ENV=true # Docker環境内であることを明示的に通知
+    networks:
+      - a2a-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5003:5003"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DOCKER_ENV=true
+      - YOUTUBE_AGENT_URL=http://youtube-agent:5000
+      - RECIPE_AGENT_URL=http://recipe-extractor:5001
+      - NOTION_AGENT_URL=http://notion-agent:5002
+    networks:
+      - a2a-network
+    depends_on:
+      - youtube-agent
+      - recipe-extractor
+      - notion-agent
+
+# 共有ネットワークの定義
+networks:
+  a2a-network:
+    driver: bridge 

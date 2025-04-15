@@ -1,0 +1,130 @@
+{
+  "name": "Notion Integration Agent",
+  "description": "A specialized agent that registers and manages recipe information in a Notion database with robust data validation, formatting, and organization capabilities. It ensures data integrity and provides seamless integration with the Notion API.",
+  "url": "http://localhost:5002",
+  "provider": {
+    "name": "Recipe Scraper Project",
+    "website": "https://recipe-scraper.example.com"
+  },
+  "version": "0.2.0",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "autonomousCommunication": true,
+    "querySkill": true,
+    "dataValidation": true,
+    "databaseIntegration": true
+  },
+  "authentication": {
+    "type": "api_key",
+    "required": true,
+    "description": "Notion API Integration Token (configured via environment variables)"
+  },
+  "defaultInputModes": ["json", "data"],
+  "defaultOutputModes": ["text", "uri-list", "data"],
+  "skills": [
+    {
+      "name": "notion_registration",
+      "description": "Registers recipe information to a specified Notion database and returns the URL of the created page, with support for formatting, rich text, and media embedding",
+      "inputModes": ["json", "data"],
+      "outputModes": ["text", "uri-list", "data"],
+      "databaseFields": {
+        "recipe_name": "Title of the recipe (required)",
+        "ingredients": "List of ingredients with amounts (required)",
+        "instructions": "Step-by-step cooking instructions (required)",
+        "category": "Recipe category (e.g., Italian, Japanese)",
+        "difficulty": "Recipe difficulty level (Easy, Medium, Hard)",
+        "youtube_url": "Source YouTube video URL (required)",
+        "thumbnail_url": "Thumbnail image URL",
+        "cooking_time": "Estimated cooking time",
+        "servings": "Number of servings",
+        "notes": "Additional notes or tips",
+        "tags": "Recipe tags for organization"
+      },
+      "parameters": {
+        "recipe_data": "Recipe information in JSON format (required)",
+        "database_id": "ID of the target Notion database (optional - uses default if not specified)",
+        "create_cover_image": "Whether to use the thumbnail as a cover image (default: true)",
+        "format_options": "Formatting options for the Notion page (optional)"
+      }
+    },
+    {
+      "name": "recipe_database_management",
+      "description": "Manages recipe information in Notion database, including creating, updating, querying, and organizing entries",
+      "inputModes": ["data", "json"],
+      "outputModes": ["data", "json"],
+      "operations": ["create", "read", "update", "query", "delete", "organize"],
+      "parameters": {
+        "operation": "Type of operation to perform (required)",
+        "query_filter": "Filter criteria for database queries",
+        "update_data": "Data to update in an existing entry",
+        "database_id": "ID of the target Notion database (optional)",
+        "page_id": "ID of the Notion page to update (required for update/delete operations)"
+      }
+    },
+    {
+      "name": "data_validation",
+      "description": "Validates and preprocesses recipe data before storing in Notion to ensure data quality and proper formatting",
+      "inputModes": ["json", "data"],
+      "outputModes": ["data", "json"],
+      "validationFeatures": ["required_fields_check", "type_conversion", "format_standardization", "data_enrichment", "error_correction"],
+      "parameters": {
+        "recipe_data": "Recipe data to validate (required)",
+        "validation_level": "Level of validation strictness (basic, standard, strict) - default: standard",
+        "auto_correct": "Whether to automatically attempt to fix issues (default: true)",
+        "return_validation_report": "Whether to return detailed validation report (default: false)"
+      }
+    },
+    {
+      "name": "notion_template_management",
+      "description": "Creates and manages templates for different recipe types in Notion",
+      "inputModes": ["json", "data"],
+      "outputModes": ["data", "uri-list"],
+      "templateFeatures": ["create_template", "apply_template", "manage_template_library"],
+      "parameters": {
+        "template_action": "Action to perform with templates (create, apply, list, delete)",
+        "template_data": "Template definition for creation or template name to apply",
+        "recipe_data": "Recipe data to apply template to (required for apply action)"
+      }
+    }
+  ],
+  "documentation": {
+    "usage_examples": [
+      {
+        "title": "Basic Recipe Registration",
+        "description": "Register a recipe to the default Notion database",
+        "input": {
+          "recipe_data": {
+            "recipe_name": "Simple Pasta Carbonara",
+            "ingredients": ["200g spaghetti", "100g pancetta", "2 eggs", "50g Parmesan cheese", "Black pepper"],
+            "instructions": ["Cook pasta until al dente", "Fry pancetta until crispy", "Mix eggs and cheese", "Combine all ingredients"],
+            "category": "Italian",
+            "difficulty": "Easy",
+            "youtube_url": "https://www.youtube.com/watch?v=example"
+          }
+        }
+      },
+      {
+        "title": "Find Similar Recipes",
+        "description": "Query the database for similar recipes",
+        "input": {
+          "operation": "query",
+          "query_filter": {
+            "category": "Italian",
+            "tags": "pasta"
+          }
+        }
+      }
+    ],
+    "error_handling": {
+      "validation_errors": "Returns detailed validation errors with suggestions",
+      "api_rate_limits": "Implements exponential backoff for Notion API rate limits",
+      "duplicate_detection": "Identifies potential duplicates based on recipe name and ingredients"
+    },
+    "notion_setup": {
+      "required_permissions": "Integration token needs read/write access to databases",
+      "database_templates": "A template database can be created automatically on first use",
+      "property_mapping": "Flexible property mapping to accommodate different database structures"
+    }
+  }
+} 
