@@ -3,8 +3,8 @@
   "description": "An agent that downloads audio from YouTube videos, extracts subtitles, and performs high-accuracy transcription using faster-whisper. It can process both Japanese and English content, extract video metadata, and analyze content types.",
   "url": "http://localhost:5000",
   "provider": {
-    "name": "Recipe Scraper Project",
-    "website": "https://recipe-scraper.example.com"
+    "name": "Recipe Cliper Project",
+    "website": "https://recipe-cliper.example.com"
   },
   "version": "0.2.0",
   "capabilities": {

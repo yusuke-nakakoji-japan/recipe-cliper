@@ -1,10 +1,10 @@
-# Recipe Scraper
+# Recipe Cliper
 
 YouTubeの料理動画からレシピを抽出し、NotionのDBに格納するツール
 
 ## 概要
 
-Recipe Scraperは、YouTube動画の字幕からレシピ情報を自動的に抽出し、Notionデータベースに整理して保存するツールです。AI技術を活用して動画コンテンツからレシピの材料や手順を抽出し、レシピコレクションを簡単に管理できます。
+Recipe Cliperは、YouTube動画の字幕からレシピ情報を自動的に抽出し、Notionデータベースに整理して保存するツールです。AI技術を活用して動画コンテンツからレシピの材料や手順を抽出し、レシピコレクションを簡単に管理できます。
 
 ## 機能
 
@@ -41,7 +41,7 @@ Recipe Scraperは、YouTube動画の字幕からレシピ情報を自動的に�
 
 1. [Notion Developers]にアクセスします
 2. 「+ New integration」をクリックし、新しいインテグレーションを作成します
-3. 名前（例: RecipeScraperIntegration）等の必要な設定を完了させます
+3. 名前（例: RecipeCliperIntegration）等の必要な設定を完了させます
 4. 「Submit」をクリックし、生成された「Internal Integration Token」をメモします（後で`.env`ファイルに設定します）
 
 ### 3. Notionデータベースの作成
@@ -66,8 +66,8 @@ Recipe Scraperは、YouTube動画の字幕からレシピ情報を自動的に�
 ### 1. リポジトリのクローン
 
 ```bash
-git clone https://github.com/yusuke-nakakoji-japan/recipe-scraper.git
-cd recipe-scraper
+git clone https://github.com/yusuke-nakakoji-japan/recipe-cliper.git
+cd recipe-cliper
 ```
 
 ### 2. 環境変数の設定

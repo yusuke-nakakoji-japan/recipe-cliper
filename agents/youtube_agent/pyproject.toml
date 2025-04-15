@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "recipe-scraper"  # ディレクトリ名に合わせる
+name = "recipe-cliper-youtube-agent"
 version = "0.1.0"
-description = "A2A agent for transcribing YouTube videos using Whisper"
+description = "Recipe Cliper YouTube Agent - 動画からの字幕抽出"
 readme = "README.md"
 packages = [{include = "agent"}]
 

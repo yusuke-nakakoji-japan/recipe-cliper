@@ -3,8 +3,8 @@
   "description": "An advanced agent that extracts structured recipe information from transcribed text of cooking videos using Gemini API. It identifies ingredients, instructions, difficulty level, and cuisine categories, and can forward the data to Notion for storage.",
   "url": "http://localhost:5001",
   "provider": {
-    "name": "Recipe Scraper Project",
-    "website": "https://recipe-scraper.example.com"
+    "name": "Recipe Cliper Project",
+    "website": "https://recipe-cliper.example.com"
   },
   "version": "0.2.0",
   "capabilities": {

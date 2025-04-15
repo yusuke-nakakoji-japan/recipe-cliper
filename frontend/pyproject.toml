@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "recipe-scraper-frontend"
+name = "recipe-cliper-frontend"
 version = "0.1.0"
-description = "Recipe Scraper Frontend - YouTubeレシピ自動保存ツールのWebインターフェース"
+description = "Recipe Cliper Frontend - YouTubeレシピ自動保存ツールのWebインターフェース"
 readme = "README.md"
 
 [tool.poetry.dependencies]

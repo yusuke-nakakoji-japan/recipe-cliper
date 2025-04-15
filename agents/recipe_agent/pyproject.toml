@@ -1,7 +1,7 @@
 [project]
-name = "recipe-agent"
+name = "recipe-cliper-recipe-agent"
 version = "0.1.0"
-description = ""
+description = "Recipe Cliper Recipe Agent - テキストからのレシピ情報抽出"
 requires-python = ">=3.12"
 
 

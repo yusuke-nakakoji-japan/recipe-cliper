@@ -1,7 +1,7 @@
 [project]
-name = "notion-agent"
+name = "recipe-cliper-notion-agent"
 version = "0.1.0"
-description = "Notion Integration Agent for A2A Protocol"
+description = "Recipe Cliper Notion Agent - Notionデータベース連携"
 
 
 [build-system]

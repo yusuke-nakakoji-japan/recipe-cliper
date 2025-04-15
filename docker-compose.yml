@@ -10,7 +10,7 @@ services:
     volumes: []
     environment:
       - PYTHONUNBUFFERED=1 # Dockerログの出力を確実にするため
-      - DOCKER_ENV=true # Docker環境内であることを明示的に通知
+      - DOCKER_ENV=true # Recipe Cliper - Docker環境内であることを明示的に通知
     networks:
       - a2a-network
 
@@ -25,11 +25,11 @@ services:
       - .env # .env ファイルから環境変数を読み込む (GEMINI_API_KEY)
     environment:
       - PYTHONUNBUFFERED=1 # ログ出力用
-      - DOCKER_ENV=true # Docker環境内であることを明示的に通知
+      - DOCKER_ENV=true # Recipe Cliper - Docker環境内であることを明示的に通知
     networks:
       - a2a-network
 
-  notion-agent: # New service for Notion integration
+  notion-agent: # Recipe Cliper Notion連携サービス
     build:
       context: ./agents/notion_agent
       dockerfile: Dockerfile
@@ -39,7 +39,7 @@ services:
       - .env # For NOTION_API_KEY and NOTION_DATABASE_ID
     environment:
       - PYTHONUNBUFFERED=1
-      - DOCKER_ENV=true # Docker環境内であることを明示的に通知
+      - DOCKER_ENV=true # Recipe Cliper - Docker環境内であることを明示的に通知
     networks:
       - a2a-network
 
@@ -62,7 +62,7 @@ services:
       - recipe-extractor
       - notion-agent
 
-# 共有ネットワークの定義
+# Recipe Cliperの共有ネットワーク定義
 networks:
   a2a-network:
     driver: bridge 

@@ -3,8 +3,8 @@
   "description": "A specialized agent that registers and manages recipe information in a Notion database with robust data validation, formatting, and organization capabilities. It ensures data integrity and provides seamless integration with the Notion API.",
   "url": "http://localhost:5002",
   "provider": {
-    "name": "Recipe Scraper Project",
-    "website": "https://recipe-scraper.example.com"
+    "name": "Recipe Cliper Project",
+    "website": "https://recipe-cliper.example.com"
   },
   "version": "0.2.0",
   "capabilities": {
