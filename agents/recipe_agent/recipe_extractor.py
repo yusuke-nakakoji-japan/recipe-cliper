@@ -2,12 +2,13 @@
 # 説明: Gemini APIを使用して文字起こしテキストからレシピ情報を抽出する機能
 
 import os
+import re
+import time
 import json
 import google.generativeai as genai
-from google.generativeai.types import GenerationConfig  # GenerationConfig をインポート
+from google.generativeai.types import GenerationConfig
 from dotenv import load_dotenv
-import traceback  # スタックトレース取得用
-import logging  # ログ出力用
+import logging
 
 # === ロギング設定 ===
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -22,13 +23,14 @@ if api_key:
 else:
     logger.warning("警告: 環境変数 GEMINI_API_KEY が設定されていません。API呼び出しは失敗します。")
 
+
 # === プロンプトテンプレート ===
 # JSON部分の {} をエスケープ
 RECIPE_EXTRACTION_PROMPT = """
 あなたは料理レシピの抽出アシスタントです。
-与えられた #YouTubeURL #チャンネル名 #サムネイルURL 及びその動画の #文字起こしテキスト から、以下の情報を抽出し、指定されたJSON形式で出力してください。
+与えられた #YouTubeURL #動画タイトル #チャンネル名 #サムネイルURL 及びその動画の #文字起こしテキスト から、以下の情報を抽出し、指定されたJSON形式で出力してください。
 
-1. 料理名（レシピタイトル）: 必ず抽出して含めてください。明確でない場合は「不明なレシピ」と記載
+1. 料理名（レシピタイトル）: #動画タイトル を参考に、料理そのものの名前のみを簡潔に抽出してください（例: 動画タイトルが「激安豚こま肉で作る老舗の味【炒り豚】」なら「炒り豚」）。価格・食材の説明・宣伝文句・記号は含めないでください。明確でない場合は「不明なレシピ」と記載
 2. 料理のカテゴリ (例: 和食, イタリアン, 中華, デザート, etc.)
 3. 料理の難易度 (簡単, 普通, 難しい のうちどれか): 動画の内容から推定して記載
 4. 材料リスト: 各材料を「・材料名: 分量」の形式の文字列として配列に格納
@@ -75,6 +77,9 @@ RECIPE_EXTRACTION_PROMPT = """
 #YouTubeURL
 {youtube_url}
 
+#動画タイトル
+{video_title}
+
 #チャンネル名
 {channel_name}
 
@@ -85,7 +90,7 @@ RECIPE_EXTRACTION_PROMPT = """
 {transcript_text}
 """
 
-def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_name: str = None, thumbnail_url: str = None) -> str | None:
+def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_name: str = None, thumbnail_url: str = None, video_title: str = None) -> str | None:
     """
     文字起こしテキストとYouTube URLからGemini APIを使用してレシピ情報(JSON)を抽出する
     JSONモードを利用して出力の信頼性を高める
@@ -104,13 +109,13 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
         return None
 
     try:
-        # 使用するモデルを指定
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-flash-latest')
 
         # プロンプトに文字起こしテキストとURLを埋め込む
         prompt = RECIPE_EXTRACTION_PROMPT.format(
             transcript_text=transcript_text,
             youtube_url=youtube_url,
+            video_title=video_title or "",
             channel_name=channel_name or "不明",
             thumbnail_url=thumbnail_url or ""
         )
@@ -121,11 +126,29 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
         )
 
         logger.info("Geminiにレシピ抽出リクエストを送信します...")
-        # generation_config を渡してAPIを呼び出す
-        response = model.generate_content(
-            prompt,
-            generation_config=generation_config
-        )
+        MAX_RETRIES = 3
+        response = None
+        for attempt in range(MAX_RETRIES):
+            try:
+                response = model.generate_content(prompt, generation_config=generation_config)
+                break
+            except Exception as api_err:
+                err_str = str(api_err)
+                if "429" in err_str:
+                    # 1日の上限超過（RPD）はリトライしても解消しないため即座に失敗
+                    if "PerDay" in err_str or "per_day" in err_str.lower():
+                        logger.error("1日のAPIリクエスト上限に達しました。翌日以降に再試行してください。")
+                        raise
+                    # 1分あたりの上限（RPM）は待機後にリトライ
+                    if attempt < MAX_RETRIES - 1:
+                        match = re.search(r'retry.*?(\d+)\s*s', err_str, re.IGNORECASE)
+                        wait_sec = int(match.group(1)) + 5 if match else 60
+                        logger.warning(f"RPM制限に達しました。{wait_sec}秒後にリトライします（{attempt+1}/{MAX_RETRIES}）")
+                        time.sleep(wait_sec)
+                    else:
+                        raise
+                else:
+                    raise
 
         # JSONモードの場合、応答テキストが直接JSON文字列になることを期待
         if response and hasattr(response, 'text'):

@@ -187,6 +187,7 @@ def tasks_send():
     youtube_url = metadata.get('youtube_url', '')
     channel_name = metadata.get('channel_name', '')
     thumbnail_url = metadata.get('thumbnail_url', '')
+    video_title = metadata.get('video_title', '')
 
     logger.info(f"[{task_id}] 新しいタスクを受信しました。メタデータ: {metadata}")
 
@@ -270,8 +271,7 @@ def tasks_send():
     task_status = "working" # 初期状態
 
     try:
-        # youtube_url と チャンネル名、サムネイルURLも渡す
-        extracted_recipe_json = extract_recipe_from_text(transcript_text, youtube_url, channel_name, thumbnail_url)
+        extracted_recipe_json = extract_recipe_from_text(transcript_text, youtube_url, channel_name, thumbnail_url, video_title)
         if extracted_recipe_json:
             # JSONとしてパースし、必須フィールドが含まれているか検証
             try:
@@ -307,12 +307,21 @@ def tasks_send():
                     if not all(isinstance(ing, str) for ing in parsed_json["ingredients"]):
                         logger.warning(f"[{task_id}] 材料リストの形式が期待と異なります（文字列配列ではありません）")
                 
-                task_status = "completed"
-                
                 # タスク完了後に次のエージェントに転送
                 send_result = send_to_next_agent(task_id, extracted_recipe_json, youtube_url, channel_name, thumbnail_url)
                 if not send_result:
-                    logger.warning(f"[{task_id}] 次のエージェントへの転送に失敗しましたが、タスク自体は完了しています")
+                    task_status = "failed"
+                    error_message = "Notionエージェントへの転送に失敗しました"
+                    logger.error(f"[{task_id}] {error_message}")
+                elif send_result.get("status") == "failed":
+                    task_status = "failed"
+                    error_message = send_result.get("error", {}).get("message", "Notion登録に失敗しました")
+                    logger.error(f"[{task_id}] Notionエージェントがエラーを返しました: {error_message}")
+                else:
+                    task_status = "completed"
+                    notion_url = send_result.get("metadata", {}).get("notion_url")
+                    if notion_url:
+                        logger.info(f"[{task_id}] NotionページURL: {notion_url}")
                 
             except json.JSONDecodeError:
                 logger.error(f"[{task_id}] 抽出されたJSONがパースできませんでした")
@@ -336,14 +345,16 @@ def tasks_send():
         "taskId": task_id,
         "status": task_status,
         "metadata": {
-            "flow_step": "notion", # 次のステップを指定
-            "flow_completed": False, # レシピ抽出は完了したがエンドツーエンドフローはまだ
+            "flow_step": "completed" if task_status == "completed" else "failed",
+            "flow_completed": task_status == "completed",
             "youtube_url": youtube_url,
             "channel_name": channel_name,
             "thumbnail_url": thumbnail_url,
             "source_agent": "recipe_agent"
         }
     }
+    if task_status == "completed" and "notion_url" in locals() and notion_url:
+        response["metadata"]["notion_url"] = notion_url
     
     # タスクが完了した場合のみアーティファクトを含める
     if task_status == "completed":
@@ -630,20 +641,18 @@ def send_to_next_agent(task_id, recipe_json, youtube_url=None, channel_name=None
     # 4. 次のエージェントにタスクを転送
     try:
         logger.info(f"[{task_id}] 🔄 '{selected_agent['name']}'にタスクを転送中...")
-        response = requests.post(tasks_endpoint, json=task_data, timeout=30)
-        
-        # 応答の検証
+        response = requests.post(tasks_endpoint, json=task_data, timeout=60)
+
         if response.status_code == 200:
             result = response.json()
-            logger.info(f"[{task_id}] ✅ '{selected_agent['name']}'がタスクを受理しました（ステータス: {result.get('status')}）")
-            return True
+            logger.info(f"[{task_id}] ✅ '{selected_agent['name']}'がタスクを処理しました（ステータス: {result.get('status')}）")
+            return result
         else:
             logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'からエラー応答: {response.status_code}")
-            logger.warning(f"[{task_id}] ⚠️ エラー詳細: {response.text[:200]}")
-            return False
+            return {"status": "failed", "error": {"message": f"HTTPエラー: {response.status_code}"}}
     except Exception as e:
         logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'との通信エラー: {e}")
-        return False
+        return None
 
 #----------------------------------------------
 # 6. メインアプリケーション実行
