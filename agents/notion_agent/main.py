@@ -398,7 +398,7 @@ def tasks_send():
         }
     
     logger.info(f"[{task_id}] A2Aプロトコル準拠のレスポンスを返します")
-    return jsonify(response), 200 if task_status == "completed" else 500
+    return jsonify(response)
 
 @app.route('/health', methods=['GET'])
 def health_check():
