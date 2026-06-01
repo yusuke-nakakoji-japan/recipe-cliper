@@ -66,6 +66,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5003:5003"
+    env_file:
+      - .env
     environment:
       - PYTHONUNBUFFERED=1
       - DOCKER_ENV=true

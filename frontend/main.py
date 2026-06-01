@@ -10,11 +10,12 @@ import os
 import uuid
 import time
 import logging
+from functools import wraps
 from urllib.parse import urlparse
 
 # サードパーティライブラリ
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, Response
 from waitress import serve
 
 #----------------------------------------------
@@ -39,6 +40,73 @@ if os.environ.get('FLASK_ENV') == 'development' and not os.environ.get('DOCKER_E
 
 # タスク状態を追跡する辞書
 tasks = {}
+
+#----------------------------------------------
+# 認証設定
+#----------------------------------------------
+AUTH_USERNAME = os.environ.get('AUTH_USERNAME', '')
+AUTH_PASSWORD = os.environ.get('AUTH_PASSWORD', '')
+MAX_FAILED_ATTEMPTS = 5      # 最大失敗回数
+LOCKOUT_DURATION    = 15 * 60  # ロックアウト時間（秒）
+
+# IPごとの失敗記録: {ip: {"count": int, "lockout_until": float}}
+_failed_attempts: dict = {}
+
+def _get_client_ip() -> str:
+    return request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip()
+
+def _is_locked(ip: str) -> bool:
+    entry = _failed_attempts.get(ip)
+    if not entry:
+        return False
+    if entry["lockout_until"] > time.time():
+        return True
+    _failed_attempts.pop(ip, None)
+    return False
+
+def _record_failure(ip: str) -> None:
+    entry = _failed_attempts.setdefault(ip, {"count": 0, "lockout_until": 0.0})
+    entry["count"] += 1
+    if entry["count"] >= MAX_FAILED_ATTEMPTS:
+        entry["lockout_until"] = time.time() + LOCKOUT_DURATION
+        logger.warning(f"[Auth] IP {ip} がログイン {MAX_FAILED_ATTEMPTS} 回失敗: {LOCKOUT_DURATION // 60}分ロックアウト")
+
+def _clear_failure(ip: str) -> None:
+    _failed_attempts.pop(ip, None)
+
+def require_auth(f):
+    """Basic認証 + ロックアウトデコレータ"""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        ip = _get_client_ip()
+
+        if _is_locked(ip):
+            remaining = int(_failed_attempts[ip]["lockout_until"] - time.time())
+            return Response(
+                f"アクセスがロックされています。あと {remaining} 秒後に再試行してください。",
+                403,
+                {"Content-Type": "text/plain; charset=utf-8"}
+            )
+
+        auth = request.authorization
+        if auth and auth.username == AUTH_USERNAME and auth.password == AUTH_PASSWORD:
+            _clear_failure(ip)
+            return f(*args, **kwargs)
+
+        _record_failure(ip)
+        if _is_locked(ip):
+            return Response(
+                f"ログインに {MAX_FAILED_ATTEMPTS} 回失敗しました。{LOCKOUT_DURATION // 60} 分間アクセスがロックされます。",
+                403,
+                {"Content-Type": "text/plain; charset=utf-8"}
+            )
+
+        return Response(
+            "認証が必要です",
+            401,
+            {"WWW-Authenticate": 'Basic realm="Recipe Cliper"'}
+        )
+    return decorated
 
 #----------------------------------------------
 # 4. Flaskアプリケーション初期化
@@ -146,11 +214,13 @@ def check_task_status(task_id):
 # 6. ルート定義
 #----------------------------------------------
 @app.route('/')
+@require_auth
 def index():
     """トップページを表示"""
     return render_template('index.html')
 
 @app.route('/submit', methods=['POST'])
+@require_auth
 def submit_url():
     """YouTubeのURLを受け取り処理を開始"""
     youtube_url = request.form.get('youtube_url')
@@ -180,6 +250,7 @@ def submit_url():
         }), 500
 
 @app.route('/status/<task_id>')
+@require_auth
 def get_task_status(task_id):
     """タスクの状態を取得するAPI"""
     try:
