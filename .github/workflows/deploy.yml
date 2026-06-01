@@ -1,4 +1,4 @@
-name: Deploy to Oracle Cloud
+name: Deploy to GCE
 
 on:
   push:
@@ -8,7 +8,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to Oracle Cloud VM
+      - name: Deploy to GCE VM
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.GCE_HOST }}
