@@ -1,12 +1,12 @@
 {
-  "name": "YouTube Transcription Agent",
-  "description": "An agent that downloads audio from YouTube videos, extracts subtitles, and performs high-accuracy transcription using faster-whisper. It can process both Japanese and English content, extract video metadata, and analyze content types.",
+  "name": "YouTube Subtitle Agent",
+  "description": "An agent that extracts subtitles from YouTube videos and retrieves video metadata (title, channel name, thumbnail URL). Supports both manually created and auto-generated subtitles in Japanese and English.",
   "url": "http://localhost:5000",
   "provider": {
     "name": "Recipe Cliper Project",
     "website": "https://recipe-cliper.example.com"
   },
-  "version": "0.2.0",
+  "version": "0.3.0",
   "capabilities": {
     "streaming": false,
     "pushNotifications": false,
@@ -18,19 +18,6 @@
   "defaultInputModes": ["text", "uri-list", "data"],
   "defaultOutputModes": ["text", "data"],
   "skills": [
-    {
-      "name": "video_transcription",
-      "description": "Downloads audio from a YouTube video and transcribes it using faster-whisper with optional language preference",
-      "inputModes": ["uri-list", "data"],
-      "outputModes": ["text"],
-      "supportedLanguages": ["ja", "en"],
-      "transcriptionQuality": ["standard", "high"],
-      "parameters": {
-        "youtube_url": "URL of the YouTube video to transcribe (required)",
-        "language": "Optional preferred language for transcription (default: auto-detect)",
-        "quality": "Optional transcription quality setting (default: standard)"
-      }
-    },
     {
       "name": "subtitle_extraction",
       "description": "Extracts available subtitles from YouTube videos, prioritizing manually created subtitles over auto-generated ones",
@@ -45,32 +32,30 @@
     },
     {
       "name": "video_metadata",
-      "description": "Extracts metadata (channel, thumbnail URL, title, description) from YouTube videos",
+      "description": "Extracts metadata (channel name, thumbnail URL, video title) from YouTube videos",
       "inputModes": ["uri-list", "data"],
       "outputModes": ["data"],
-      "extractableFields": ["channel_name", "thumbnail_url", "title", "description", "published_date", "view_count"],
+      "extractableFields": ["channel_name", "thumbnail_url", "title"],
       "parameters": {
-        "youtube_url": "URL of the YouTube video (required)",
-        "fields": "Optional array of specific fields to extract (default: all fields)"
+        "youtube_url": "URL of the YouTube video (required)"
       }
     },
     {
       "name": "content_type_detection",
-      "description": "Analyzes transcribed content to determine the type of content (recipe, tutorial, etc.)",
+      "description": "Analyzes subtitle text to determine the type of content (recipe, tutorial, etc.)",
       "inputModes": ["text"],
       "outputModes": ["data"],
       "detectionCategories": ["recipe", "general", "tutorial", "review", "vlog"],
       "parameters": {
-        "text": "Transcribed text content to analyze (required)",
-        "detailed_analysis": "Whether to include detailed reasoning for classification (default: false)"
+        "text": "Subtitle text content to analyze (required)"
       }
     }
   ],
   "documentation": {
     "usage_examples": [
       {
-        "title": "Basic Transcription",
-        "description": "Transcribe a cooking video from YouTube",
+        "title": "Extract Subtitles",
+        "description": "Extract subtitles from a YouTube cooking video",
         "input": {"youtube_url": "https://www.youtube.com/watch?v=example"}
       },
       {
@@ -80,8 +65,7 @@
       }
     ],
     "rate_limits": {
-      "requests_per_minute": 10,
-      "concurrent_transcriptions": 2
+      "requests_per_minute": 10
     }
   }
-} 
+}
