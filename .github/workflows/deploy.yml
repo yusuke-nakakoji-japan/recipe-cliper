@@ -11,9 +11,9 @@ jobs:
       - name: Deploy to Oracle Cloud VM
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.ORACLE_HOST }}
-          username: ubuntu
-          key: ${{ secrets.ORACLE_SSH_KEY }}
+          host: ${{ secrets.GCE_HOST }}
+          username: ${{ secrets.GCE_USER }}
+          key: ${{ secrets.GCE_SSH_KEY }}
           script: |
             cd ~/recipe-cliper
             git pull origin main
