@@ -202,9 +202,6 @@ function updateStatus(data) {
         </div>
         <p>処理中です。しばらくお待ちください。</p>
     `;
-    if (data.status === 'completed' || data.step === 'completed') {
-        setTimeout(() => showComplete(data), 1000);
-    }
 }
 
 /**
@@ -217,12 +214,13 @@ function showComplete(data) {
     resultSuccess.style.display = 'block';
     resultError.style.display = 'none';
     
-    // Notion URLがある場合はリンクを表示
+    // 既存のNotionリンクを削除してから追加
+    resultSuccess.querySelectorAll('.notion-link').forEach(el => el.remove());
     if (data.notion_url) {
         const notionLinkContainer = document.createElement('div');
         notionLinkContainer.className = 'notion-link';
         notionLinkContainer.innerHTML = `
-            <p>登録したレシピを見る: 
+            <p>登録したレシピを見る:
                 <a href="${data.notion_url}" target="_blank" rel="noopener noreferrer">
                     Notionで開く
                 </a>

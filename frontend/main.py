@@ -111,79 +111,34 @@ def check_task_status(task_id):
         return task
     
     try:
-        # 処理方法を変更: YouTubeエージェントのタスク状態を直接取得するのではなく
-        # 各エージェントの健全性をチェックし、処理の完了を推測する
         youtube_task_id = task.get("youtube_task_id")
-        
-        # YouTubeエージェントに /tasks/get エンドポイントがあれば使用
-        try:
-            response = requests.get(f"{YOUTUBE_AGENT_URL}/tasks/get?taskId={youtube_task_id}", timeout=3)
-            if response.status_code == 200:
-                youtube_task = response.json()
-                logger.info(f"YouTube Task API Response: {youtube_task}")
-                
-                # プロトコルに従ったタスク完了チェック
-                if youtube_task.get("status") == "completed":
-                    task["status"] = "completed"
-                    task["step"] = "completed"
-                    task["message"] = "タスクが完了しました"
-                    
-                    # メタデータから情報を取得
-                    metadata = youtube_task.get("metadata", {})
-                    if metadata.get("notion_url"):
-                        task["notion_url"] = metadata.get("notion_url")
-                    
-                    tasks[task_id] = task
-                    return task
-        except Exception as e:
-            # この例外は無視して他の検出方法を試す
-            logger.warning(f"YouTube tasks/get APIでエラー: {e}")
-        
-        # タスク作成から一定時間（3分）経過したらNotionエージェントをチェック
-        if time.time() - task["created_at"] > 180:  # 3分経過
-            try:
-                # Notionエージェントのヘルスを確認
-                notion_health = requests.get(f"{NOTION_AGENT_URL}/health", timeout=2)
-                
-                if notion_health.status_code == 200:
-                    # 処理が成功している可能性が高い
-                    task["status"] = "completed"
-                    task["step"] = "completed"
-                    task["message"] = "Notionへの登録が完了しました"
-                    logger.info(f"タスク {task_id} は時間経過からNotionへの登録完了と判断")
-            except Exception as e:
-                logger.warning(f"Notionエージェントとの通信エラー: {e}")
-        
-        # レシピやNotion処理の成功を示す情報があれば反映
-        if "step" in task and task["step"] in ["notion", "completed"]:
-            task["status"] = "completed"
-            task["message"] = "レシピがNotionに登録されました"
-            
-        # タイムアウト処理（10分以上経過したタスクは完了と判断）
-        if time.time() - task["created_at"] > 600:  # 10分経過
-            task["status"] = "completed"
-            task["step"] = "completed"
-            task["message"] = "レシピがNotionに登録されました（タイムアウト）"
-            logger.info(f"タスク {task_id} はタイムアウトにより完了と判断")
-        
-        # 更新された情報を保存して返す
+        response = requests.get(f"{YOUTUBE_AGENT_URL}/tasks/get?taskId={youtube_task_id}", timeout=5)
+
+        if response.status_code == 200:
+            youtube_task = response.json()
+            status = youtube_task.get("status")
+            metadata = youtube_task.get("metadata", {})
+
+            if status == "completed":
+                task["status"] = "completed"
+                task["step"] = "completed"
+                task["message"] = "レシピがNotionに登録されました"
+                if metadata.get("notion_url"):
+                    task["notion_url"] = metadata["notion_url"]
+
+            elif status == "failed":
+                task["status"] = "error"
+                task["step"] = "error"
+                error_info = youtube_task.get("error", {})
+                task["message"] = error_info.get("message", "処理中にエラーが発生しました")
+
+            # status == "working" の場合はそのまま processing を維持
+
         tasks[task_id] = task
         return task
+
     except Exception as e:
         logger.error(f"タスク状態の確認中にエラーが発生しました: {e}")
-        # エラーが一定回数を超えたら完了とみなす
-        if "error_count" not in task:
-            task["error_count"] = 1
-        else:
-            task["error_count"] += 1
-            
-        # エラーが5回を超えたら処理完了と判断（値を小さくして早めに完了と判断）
-        if task.get("error_count", 0) > 5:
-            task["status"] = "completed"
-            task["step"] = "completed"
-            task["message"] = "処理が完了したと推定されます"
-            logger.info(f"タスク {task_id} はエラー回数超過により完了と判断")
-        
         tasks[task_id] = task
         return task
 
