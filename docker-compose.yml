@@ -7,8 +7,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
-    volumes:
-      - huggingface-cache:/root/.cache/huggingface
     environment:
       - PYTHONUNBUFFERED=1
       - DOCKER_ENV=true
@@ -89,6 +87,4 @@ networks:
   a2a-network:
     driver: bridge 
 
-# volumesセクションに追加
-volumes:
-  huggingface-cache:
+volumes: {}

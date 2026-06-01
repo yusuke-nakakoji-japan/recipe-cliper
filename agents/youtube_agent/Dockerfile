@@ -11,7 +11,7 @@ ENV POETRY_NO_INTERACTION=1 \
 
 # OS依存パッケージのインストール (Whisperに必要なffmpegなど)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ffmpeg nodejs \
+    && apt-get install -y --no-install-recommends curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -27,8 +27,8 @@ COPY pyproject.toml ./
 # 依存関係をインストール
 RUN poetry lock && poetry install --no-root
 
-# youtube-transcript-api を1.x系で上書き（poetry の依存解決制限を回避）
-RUN pip install "youtube-transcript-api>=1.0.0" --force-reinstall --quiet
+# youtube-transcript-api を1.x系で上書き（poetryの依存解決制限を回避）
+RUN pip install "youtube-transcript-api>=1.0.0" "requests" --force-reinstall --quiet
 
 # アプリケーションコードをコピー
 COPY . /app/

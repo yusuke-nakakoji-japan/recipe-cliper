@@ -1,23 +1,21 @@
 # ファイル名: agents/youtube_agent/main.py
-# 説明: YouTubeから動画の字幕および音声を抽出し、テキストに変換するエージェント
+# 説明: YouTubeから動画の字幕を取得し、テキストに変換するエージェント
 
 #----------------------------------------------
 # 1. インポート
 #----------------------------------------------
 # 標準ライブラリ
 import os
+import re
 import json
 import uuid
 import time
-import tempfile
 from pathlib import Path
 
 # サードパーティライブラリ
-import re
 import requests
 from flask import Flask, request, jsonify
 import yt_dlp
-from faster_whisper import WhisperModel
 from waitress import serve
 from youtube_transcript_api import YouTubeTranscriptApi, NoTranscriptFound, TranscriptsDisabled, VideoUnavailable
 
@@ -42,15 +40,8 @@ AGENT_CARD_PATH = Path(__file__).parent / "agent_card.json"
 # デフォルトポート (既存エージェントと衝突しないように設定)
 DEFAULT_PORT = 5000
 
-# Whisperモデル設定
-MODEL_SIZE = "base"  # 使用するWhisperモデルのサイズ (tiny, base, small, medium, large-v2, large-v3)
-DEVICE = "cpu"  # 使用するデバイス (cpu または cuda)
-COMPUTE_TYPE = "int8"  # 量子化のタイプ (float16, int8_float16, int8)
-
-# ダウンロード設定
-DOWNLOAD_DIR = Path(tempfile.gettempdir()) / "youtube_audio_downloads"
+# 字幕設定
 USE_SUBTITLES = True  # YouTube字幕の取得を有効化
-USE_TRANSCRIPTION = True  # 音声からの文字起こしを有効化
 SUBTITLE_LANG = ["ja", "en"]  # 取得する字幕の優先言語 (先頭が最優先)
 
 #----------------------------------------------
@@ -65,13 +56,7 @@ task_states = {}
 #----------------------------------------------
 # 5. グローバル初期化処理
 #----------------------------------------------
-# アプリケーション起動時にモデルをロード
-logger.info(f"faster-whisperモデルをロード中: {MODEL_SIZE}")
-whisper_model = WhisperModel(MODEL_SIZE, device=DEVICE, compute_type=COMPUTE_TYPE)
-logger.info("モデルのロードが完了しました。")
-
-# ダウンロード用ディレクトリ作成
-DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
+logger.info("YouTube Agent を起動します。")
 
 #----------------------------------------------
 # 6. API関連の関数（エンドポイント）
@@ -184,11 +169,10 @@ def tasks_send():
 
     logger.info(f"[{task_id}] Received task (ID: {task_id})")  # Don't print the actual YouTube URL
 
-    transcription_text = ""
     subtitle_text = ""
     final_text = ""
     error_message = None
-    task_status = "working" # 初期ステータス
+    task_status = "working"
     channel_name = None
     thumbnail_url = None
     video_title = None
@@ -222,60 +206,17 @@ def tasks_send():
             logger.warning(f"[{task_id}] 動画情報の取得でエラーが発生しました: {str(e)}")
             # エラーがあってもプロセスは続行（メタデータは任意）
             
-        # --- 1. 字幕取得と音声文字起こしを並行処理 ---
+        # --- 1. 字幕取得 ---
         logger.info(f"[{task_id}] 処理を開始: {youtube_url}")
-        
-        # 字幕取得（設定で有効な場合）
-        if USE_SUBTITLES:
-            logger.info(f"[{task_id}] YouTube字幕取得を試みています...")
-            subtitle_text = download_subtitles(youtube_url, SUBTITLE_LANG)
-            if subtitle_text:
-                logger.info(f"[{task_id}] YouTube字幕を取得しました（{len(subtitle_text)}文字）")
-            else:
-                logger.info(f"[{task_id}] YouTube字幕は利用できませんでした")
-        
-        # 音声文字起こし（設定で有効な場合）
-        if USE_TRANSCRIPTION:
-            if not subtitle_text or len(subtitle_text) < 100:  # 短すぎる字幕は役に立たない可能性が高い
-                logger.info(f"[{task_id}] 音声文字起こしを開始します...")
-                try:
-                    transcription_text, transcription_error, audio_path_temp = transcribe_audio(youtube_url, task_id)
-                    if transcription_text:
-                        logger.info(f"[{task_id}] 音声文字起こしが完了しました（{len(transcription_text)}文字）")
-                    else:
-                        logger.info(f"[{task_id}] 音声文字起こしに失敗しました")
-                    # 一時音声ファイルを削除
-                    if audio_path_temp and audio_path_temp.exists():
-                        try:
-                            audio_path_temp.unlink()
-                        except OSError:
-                            pass
-                except Exception as e:
-                    # 文字起こしのエラーは深刻なので、エラーとして扱う
-                    error_message = f"音声文字起こし処理でエラーが発生しました: {str(e)}"
-                    logger.error(f"[{task_id}] {error_message}")
-                    # 字幕があればそれを使い、なければエラー
-                    if not subtitle_text:
-                        task_status = "failed"
-            else:
-                logger.info(f"[{task_id}] 十分な字幕が得られたため、音声文字起こしをスキップします")
-        
-        # --- 2. 結果のマージと整形 ---
-        if subtitle_text and transcription_text:
-            # 両方の結果がある場合、セクションに分けて併記
-            final_text = f"【字幕】\n{subtitle_text}\n\n【文字起こし】\n{transcription_text}"
-            logger.info(f"[{task_id}] 字幕と文字起こし両方の結果を併記します（合計{len(final_text)}文字）")
-        elif subtitle_text:
-            # 字幕のみがある場合
+        logger.info(f"[{task_id}] YouTube字幕取得を試みています...")
+        subtitle_text = download_subtitles(youtube_url, SUBTITLE_LANG)
+
+        # --- 2. 結果の確認 ---
+        if subtitle_text:
             final_text = subtitle_text
-            logger.info(f"[{task_id}] 字幕のみの結果を使用します（{len(final_text)}文字）")
-        elif transcription_text:
-            # 文字起こしのみがある場合
-            final_text = transcription_text
-            logger.info(f"[{task_id}] 文字起こしのみの結果を使用します（{len(final_text)}文字）")
+            logger.info(f"[{task_id}] 字幕を取得しました（{len(final_text)}文字）")
         else:
-            # どちらもない場合（エラー状態）
-            error_message = "動画から字幕も音声も取得できませんでした"
+            error_message = "この動画には字幕がありません。字幕付きの動画をお試しください。"
             task_status = "failed"
             logger.error(f"[{task_id}] {error_message}")
         
@@ -734,99 +675,6 @@ def download_subtitles(youtube_url, preferred_langs=None):
     except Exception as e:
         logger.error(f"字幕ダウンロードエラー: {e}")
         return ""
-
-def transcribe_audio(youtube_url, task_id=None):
-    """
-    YouTube動画の音声をダウンロードし、文字起こしを行う関数
-    
-    Args:
-        youtube_url: YouTube動画のURL
-        task_id: タスクID（ログ出力用）
-        
-    Returns:
-        (transcription_text, error_message, audio_path)のタプル
-        - transcription_text: 文字起こしされたテキスト（エラー時は空文字列）
-        - error_message: エラーメッセージ（成功時はNone）
-        - audio_path: ダウンロードした音声ファイルパス（クリーンアップ用、エラー時はNone）
-    """
-    if not task_id:
-        task_id = str(uuid.uuid4())
-        
-    logger.info(f"[{task_id}] 音声文字起こしを開始します...")
-    audio_path = None
-    
-    try:
-        # 一時ファイル名を設定
-        temp_audio_file = DOWNLOAD_DIR / f"audio_{task_id}.wav"
-        audio_path = temp_audio_file
-        
-        # yt-dlpオプション
-        ydl_opts = {
-            'format': 'bestaudio/best',
-            'extractaudio': True,  # 音声の抽出
-            'noplaylist': True,  # プレイリストをダウンロードしない
-            'outtmpl': str(temp_audio_file).replace('.wav', ''),  # 出力パス（拡張子はyt-dlpが自動追加）
-            'postprocessors': [{
-                'key': 'FFmpegExtractAudio',
-                'preferredcodec': 'wav',  # WAV形式に変換（whisperのデコードに最適）
-                'preferredquality': '192',  # 音質
-            }],
-            'quiet': True  # 出力抑制
-        }
-        
-        # ダウンロード実行
-        logger.info(f"[{task_id}] YouTube動画の音声をダウンロード中...")
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([youtube_url])
-            
-        # ファイルパスの確認（yt-dlpによって拡張子が付加されている可能性）
-        if audio_path.with_suffix('.wav').exists():
-            audio_path = audio_path.with_suffix('.wav')
-        elif audio_path.with_suffix('.m4a').exists():
-            audio_path = audio_path.with_suffix('.m4a')
-        elif audio_path.with_suffix('.mp3').exists():
-            audio_path = audio_path.with_suffix('.mp3')
-        else:
-            # 他の可能性のある拡張子を確認
-            for ext in ['.aac', '.flac', '.opus', '.webm']:
-                if audio_path.with_suffix(ext).exists():
-                    audio_path = audio_path.with_suffix(ext)
-                    break
-        
-        if not audio_path.exists():
-            logger.error(f"[{task_id}] ダウンロードした音声ファイルが見つかりません")
-            return "", "Downloaded audio file not found", None
-            
-        logger.info(f"[{task_id}] 音声ファイル: {audio_path}")
-        logger.info(f"[{task_id}] Whisperモデルによる文字起こしを開始...")
-        
-        # Whisperモデルで文字起こし
-        segments, info = whisper_model.transcribe(str(audio_path), beam_size=5)
-        
-        # 結果を結合して返す
-        transcription_lines = []
-        for segment in segments:
-            transcription_lines.append(segment.text)
-        
-        transcription_text = "\n".join(transcription_lines)
-        logger.info(f"[{task_id}] 文字起こし完了（長さ: {len(transcription_text)} 文字）")
-        
-        # 言語の確認（ログ出力用）
-        detected_language = info.language
-        language_probability = info.language_probability
-        logger.info(f"[{task_id}] 検出された言語: {detected_language}, 確率: {language_probability:.4f}")
-        
-        return transcription_text, None, audio_path
-        
-    except Exception as e:
-        logger.error(f"[{task_id}] 文字起こし処理でエラーが発生しました: {e}")
-        
-        # 詳細なエラーメッセージ
-        import traceback
-        error_details = traceback.format_exc()
-        logger.debug(f"[{task_id}] エラー詳細:\n{error_details}")
-        
-        return "", f"Transcription error: {e}", audio_path
 
 #----------------------------------------------
 # 9. メインアプリケーション実行
