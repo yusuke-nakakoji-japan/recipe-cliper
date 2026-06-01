@@ -24,6 +24,7 @@ build/
 # IDE files
 .idea/
 .vscode/
+.cursorignore
 
 # OS generated files
 .DS_Store
