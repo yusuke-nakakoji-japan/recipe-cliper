@@ -130,7 +130,11 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
         response = None
         for attempt in range(MAX_RETRIES):
             try:
-                response = model.generate_content(prompt, generation_config=generation_config)
+                response = model.generate_content(
+                    prompt,
+                    generation_config=generation_config,
+                    request_options={"timeout": 120}
+                )
                 break
             except Exception as api_err:
                 err_str = str(api_err)

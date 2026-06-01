@@ -615,7 +615,7 @@ def send_to_next_agent(task_id, youtube_url, final_text, metadata=None):
     # 6. 次のエージェントにタスクを転送
     try:
         logger.info(f"[{task_id}] 🔄 '{selected_agent['name']}'にタスクを転送中...")
-        response = requests.post(tasks_endpoint, json=task_data, timeout=60)
+        response = requests.post(tasks_endpoint, json=task_data, timeout=300)
 
         # 応答の検証
         if response.status_code == 200:

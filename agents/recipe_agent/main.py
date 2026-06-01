@@ -641,7 +641,7 @@ def send_to_next_agent(task_id, recipe_json, youtube_url=None, channel_name=None
     # 4. 次のエージェントにタスクを転送
     try:
         logger.info(f"[{task_id}] 🔄 '{selected_agent['name']}'にタスクを転送中...")
-        response = requests.post(tasks_endpoint, json=task_data, timeout=60)
+        response = requests.post(tasks_endpoint, json=task_data, timeout=300)
 
         if response.status_code == 200:
             result = response.json()
