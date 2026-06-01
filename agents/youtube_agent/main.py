@@ -41,7 +41,6 @@ AGENT_CARD_PATH = Path(__file__).parent / "agent_card.json"
 DEFAULT_PORT = 5000
 
 # 字幕設定
-USE_SUBTITLES = True  # YouTube字幕の取得を有効化
 SUBTITLE_LANG = ["ja", "en"]  # 取得する字幕の優先言語 (先頭が最優先)
 
 #----------------------------------------------
@@ -195,9 +194,9 @@ def tasks_send():
                 video_title = info_dict.get('title') or ""
 
                 # サムネイルURLを取得
-                thumbnail_url = (info_dict.get('thumbnail') or
-                                info_dict.get('thumbnails')[0]['url'] if info_dict.get('thumbnails') else None or
-                                "")
+                thumbnail_url = info_dict.get('thumbnail') or ""
+                if not thumbnail_url and info_dict.get('thumbnails'):
+                    thumbnail_url = info_dict['thumbnails'][0].get('url', "")
 
                 logger.info(f"[{task_id}] 動画タイトル: {video_title}")
                 logger.info(f"[{task_id}] チャンネル名: {channel_name}")

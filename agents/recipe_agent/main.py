@@ -10,7 +10,6 @@ import json
 import uuid
 import logging
 import socket
-import time
 from pathlib import Path
 
 # サードパーティライブラリ
@@ -308,6 +307,7 @@ def tasks_send():
                         logger.warning(f"[{task_id}] 材料リストの形式が期待と異なります（文字列配列ではありません）")
                 
                 # タスク完了後に次のエージェントに転送
+                notion_url = None
                 send_result = send_to_next_agent(task_id, extracted_recipe_json, youtube_url, channel_name, thumbnail_url)
                 if not send_result:
                     task_status = "failed"
@@ -353,7 +353,7 @@ def tasks_send():
             "source_agent": "recipe_agent"
         }
     }
-    if task_status == "completed" and "notion_url" in locals() and notion_url:
+    if task_status == "completed" and notion_url:
         response["metadata"]["notion_url"] = notion_url
     
     # タスクが完了した場合のみアーティファクトを含める

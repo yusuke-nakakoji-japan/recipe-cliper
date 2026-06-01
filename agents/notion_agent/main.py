@@ -6,11 +6,10 @@
 #----------------------------------------------
 # 標準ライブラリ
 import os
+import copy
 import json
 import uuid
-import time
 import logging
-import socket
 from pathlib import Path
 
 # サードパーティライブラリ
@@ -638,7 +637,6 @@ def validate_and_preprocess_recipe_data(recipe_data):
         errors.append(f"Missing required fields: {', '.join(missing_fields)}")
     
     # データの深いコピーを作成
-    import copy
     validated_data = copy.deepcopy(recipe_data)
     
     # フィールドの検証と前処理
