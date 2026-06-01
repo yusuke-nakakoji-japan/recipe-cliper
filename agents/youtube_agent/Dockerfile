@@ -27,8 +27,8 @@ COPY pyproject.toml ./
 # 依存関係をインストール
 RUN poetry lock && poetry install --no-root
 
-# youtube-transcript-api を1.x系で上書き（poetryの依存解決制限を回避）
-RUN pip install "youtube-transcript-api>=1.0.0" "requests" --force-reinstall --quiet
+# youtube-transcript-api 1.x系をインストール（poetryの依存解決制限のためpipで管理）
+RUN pip install "youtube-transcript-api>=1.0.0" --quiet
 
 # アプリケーションコードをコピー
 COPY . /app/
