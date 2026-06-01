@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   youtube-agent:
     build:
@@ -38,7 +36,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 60s
 
   notion-agent:
     build:
@@ -58,7 +56,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 15s
+      start_period: 60s
 
   frontend:
     build:
