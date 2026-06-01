@@ -10,7 +10,7 @@ python = "^3.12"  # Dockerfileのバージョンと合わせる
 Flask = "^3.0.0"
 youtube-transcript-api = "^0.6.2"
 faster-whisper = "^1.0.3"
-yt-dlp = "^2025.3.31"
+yt-dlp = ">=2025.3.31"
 google-generativeai = "^0.5.0" # Gemini API client library (Updated version)
 python-dotenv = "^1.0.0" # To load .env file
 waitress = "^2.1.2" # 本番環境向けWSGIサーバー

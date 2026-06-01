@@ -11,7 +11,7 @@ ENV POETRY_NO_INTERACTION=1 \
 
 # OS依存パッケージのインストール (Whisperに必要なffmpegなど)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ffmpeg \
+    && apt-get install -y --no-install-recommends curl ffmpeg nodejs \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -22,10 +22,13 @@ RUN curl -sSL https://install.python-poetry.org | python3 -
 WORKDIR /app
 
 # 最初に依存関係ファイルだけコピーしてインストール
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml ./
 
 # 依存関係をインストール
-RUN poetry install --no-root
+RUN poetry lock && poetry install --no-root
+
+# youtube-transcript-api を1.x系で上書き（poetry の依存解決制限を回避）
+RUN pip install "youtube-transcript-api>=1.0.0" --force-reinstall --quiet
 
 # アプリケーションコードをコピー
 COPY . /app/
@@ -34,4 +37,4 @@ COPY . /app/
 EXPOSE 5000
 
 # コンテナ起動コマンド（waitress-serveを使用）
-CMD ["poetry", "run", "waitress-serve", "--host=0.0.0.0", "--port=5000", "main:app"] 
+CMD ["poetry", "run", "waitress-serve", "--host=0.0.0.0", "--port=5000", "main:app"]
