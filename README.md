@@ -97,10 +97,16 @@ NOTION_DATABASE_ID="ここにNotionデータベースIDを貼り付け"
 ### 3. Dockerイメージのビルドと起動
 
 ```bash
-docker-compose up -d
+docker compose up --build
 ```
 
-初回起動時にはDockerイメージのビルドが行われるため、時間がかかることがあります。
+> **初回起動の注意:** YouTube AgentがWhisper音声認識モデルをダウンロード・読み込むため、初回起動には数分かかります。全サービスが準備完了するまでフロントエンドは自動的に待機します。
+
+2回目以降はビルド済みイメージを使用するため、より短時間で起動します：
+
+```bash
+docker compose up
+```
 
 ### 4. アプリケーションへのアクセス
 
@@ -121,12 +127,12 @@ http://localhost:5003
 
 アプリケーションを停止するには：
 ```bash
-docker-compose down
+docker compose down
 ```
 
 アプリケーションを再起動するには：
 ```bash
-docker-compose up -d
+docker compose up
 ```
 
 ## トラブルシューティング
@@ -138,16 +144,21 @@ docker-compose up -d
    - 各APIキーが有効であることを確認してください
 
 2. **Notionデータベース接続エラー**
-   - Notionデータベースに連携が正しく追加されているか確認してください
+   - Notionデータベースに対象のインテグレーションが接続されているか確認してください（DBページ右上「…」→「接続」）
    - データベースIDが正しいことを確認してください
 
 3. **Dockerビルドエラー**
-   - Dockerとdocker-composeが最新バージョンであることを確認してください
-   - `docker-compose down --volumes`を実行してから再度`docker-compose up -d`を試してください
+   - Docker Compose V2（`docker compose`）を使用してください
+   - `docker compose down --volumes` を実行してから再度 `docker compose up --build` を試してください
 
 4. **YouTubeエージェントのエラー**
-   - YouTubeの動画が公開状態で、字幕が利用可能であることを確認してください
-   - サポートされている言語（日本語、英語）の字幕があることを確認してください
+   - YouTubeの動画が公開状態であることを確認してください
+   - 字幕が存在しない動画の場合、音声からの文字起こしにフォールバックします（処理時間が長くなります）
+
+5. **Gemini APIのレート制限エラー（429）**
+   - 無料枠の1日あたりのリクエスト上限（RPD）に達した場合は翌日以降に再試行してください
+   - 参考: `gemini-flash-latest` の無料枠は1日あたり約20〜250リクエスト（モデルバージョンにより異なります）
+   - 短時間での上限超過（RPM）の場合はしばらく待つと自動的にリトライします
 
 ### ログの確認方法
 
@@ -155,13 +166,13 @@ docker-compose up -d
 
 ```bash
 # すべてのログを表示
-docker-compose logs -f
+docker compose logs -f
 
 # 特定のサービスのログを表示
-docker-compose logs -f youtube-agent
-docker-compose logs -f recipe-extractor 
-docker-compose logs -f notion-agent
-docker-compose logs -f frontend
+docker compose logs -f youtube-agent
+docker compose logs -f recipe-extractor
+docker compose logs -f notion-agent
+docker compose logs -f frontend
 ```
 
 ## ライセンス
