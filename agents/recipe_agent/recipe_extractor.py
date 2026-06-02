@@ -141,8 +141,9 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
                 if "429" in err_str:
                     # 1日の上限超過（RPD）はリトライしても解消しないため即座に失敗
                     if "PerDay" in err_str or "per_day" in err_str.lower():
-                        logger.error("1日のAPIリクエスト上限に達しました。翌日以降に再試行してください。")
-                        raise
+                        msg = "1日のGemini API無料枠の上限に達しました。翌日以降に再試行してください。"
+                        logger.error(msg)
+                        raise RuntimeError(msg)
                     # 1分あたりの上限（RPM）は待機後にリトライ
                     if attempt < MAX_RETRIES - 1:
                         match = re.search(r'retry.*?(\d+)\s*s', err_str, re.IGNORECASE)
@@ -189,6 +190,8 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
             logger.error("エラー: Geminiから有効な応答が得られませんでした。")
             return None
 
+    except RuntimeError:
+        raise  # ユーザー向けメッセージをそのまま上流へ伝播
     except Exception as e:
         logger.error(f"Gemini API呼び出し中または応答処理中に予期せぬエラーが発生しました: {e}")
         return None

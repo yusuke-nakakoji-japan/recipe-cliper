@@ -332,8 +332,12 @@ def tasks_send():
             task_status = "failed"
             error_message = "Failed to extract recipe from text using LLM."
 
+    except RuntimeError as e:
+        # ユーザー向けメッセージ（API上限超過など）
+        logger.error(f"[{task_id}] {e}")
+        task_status = "failed"
+        error_message = str(e)
     except Exception as e:
-        # extract_recipe_from_text 呼び出し自体で予期せぬエラーが発生した場合
         logger.error(f"[{task_id}] レシピ抽出呼び出し中に予期せぬエラーが発生しました: {e}")
         task_status = "failed"
         error_message = f"予期せぬエラーが発生しました: {e}"
