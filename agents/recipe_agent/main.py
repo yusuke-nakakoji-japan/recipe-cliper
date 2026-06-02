@@ -326,11 +326,11 @@ def tasks_send():
             except json.JSONDecodeError:
                 logger.error(f"[{task_id}] 抽出されたJSONがパースできませんでした")
                 task_status = "failed"
-                error_message = "Failed to parse extracted recipe JSON."
+                error_message = "抽出されたレシピデータの形式が正しくありませんでした。もう一度お試しください。"
         else:
             # extract_recipe_from_text が None を返した場合 (内部でエラーログ出力済)
             task_status = "failed"
-            error_message = "Failed to extract recipe from text using LLM."
+            error_message = "レシピ情報を抽出できませんでした。しばらくしてからもう一度お試しください。"
 
     except RuntimeError as e:
         # ユーザー向けメッセージ（API上限超過など）
@@ -653,7 +653,10 @@ def send_to_next_agent(task_id, recipe_json, youtube_url=None, channel_name=None
             return result
         else:
             logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'からエラー応答: {response.status_code}")
-            return {"status": "failed", "error": {"message": f"HTTPエラー: {response.status_code}"}}
+            return {"status": "failed", "error": {"message": f"Notion登録エージェントがエラーを返しました（HTTP {response.status_code}）。"}}
+    except requests.exceptions.Timeout:
+        logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'への転送がタイムアウトしました")
+        return {"status": "failed", "error": {"message": "Notion登録の処理がタイムアウトしました。しばらく待ってから再試行してください。"}}
     except Exception as e:
         logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'との通信エラー: {e}")
         return None

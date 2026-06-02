@@ -163,7 +163,7 @@ def tasks_send():
         return jsonify({
             "taskId": task_id,
             "status": "failed",
-            "error": {"code": "BadRequest", "message": "Missing or invalid 'youtube_url' in message parts."}
+            "error": {"code": "BadRequest", "message": "メッセージにYouTube URLが含まれていないか、形式が正しくありません。"}
         }), 400
 
     logger.info(f"[{task_id}] Received task (ID: {task_id})")  # Don't print the actual YouTube URL
@@ -624,7 +624,10 @@ def send_to_next_agent(task_id, youtube_url, final_text, metadata=None):
             return result
         else:
             logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'からエラー応答: {response.status_code}")
-            return {"status": "failed", "error": {"message": f"HTTPエラー: {response.status_code}"}}
+            return {"status": "failed", "error": {"message": f"レシピ抽出エージェントがエラーを返しました（HTTP {response.status_code}）。"}}
+    except requests.exceptions.Timeout:
+        logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'への転送がタイムアウトしました")
+        return {"status": "failed", "error": {"message": "レシピ抽出の処理がタイムアウトしました。動画が長い場合やAPIが混雑している場合に発生します。時間をおいて再試行してください。"}}
     except Exception as e:
         logger.warning(f"[{task_id}] ⚠️ '{selected_agent['name']}'との通信エラー: {e}")
         return None

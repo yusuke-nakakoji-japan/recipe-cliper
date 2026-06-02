@@ -324,7 +324,7 @@ def tasks_send():
         return jsonify({
             "taskId": task_id,
             "status": "failed",
-            "error": {"code": "ValidationFailed", "message": validation_errors[0] if validation_errors else "データ検証に失敗しました"}
+            "error": {"code": "ValidationFailed", "message": "レシピデータの形式が正しくありません。必須項目（料理名・材料・手順）が不足している可能性があります。"}
         }), 400
     
     # 検証済みデータを使用
@@ -349,6 +349,11 @@ def tasks_send():
             error_message = "Notionへのレシピ追加に失敗しました。詳細はエージェントのログを確認してください。"
             logger.error(f"[{task_id}] add_recipe_to_notionがNoneを返しました")
 
+    except RuntimeError as e:
+        # ユーザー向けメッセージ（Notion設定エラー・APIエラーなど）をそのまま伝播
+        logger.error(f"[{task_id}] {e}")
+        task_status = "failed"
+        error_message = str(e)
     except Exception as e:
         # add_recipe_to_notion 呼び出し自体で予期せぬエラーが発生した場合
         logger.exception(f"[{task_id}] Notion処理中に予期せぬエラーが発生: {e}")

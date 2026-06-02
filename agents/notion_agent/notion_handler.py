@@ -146,8 +146,9 @@ def add_recipe_to_notion(recipe_data: dict) -> str | None:
         str | None: 新しく作成されたNotionページのURL。エラーが発生した場合はNone。
     """
     if not notion or not DATABASE_ID:
-        logger.error("NotionクライアントまたはデータベースIDが設定されていません。")
-        return None
+        msg = "Notionの接続情報（APIキーまたはデータベースID）が設定されていません。管理者にお問い合わせください。"
+        logger.error(msg)
+        raise RuntimeError(msg)
     if not recipe_data:
         logger.error("空のレシピデータを受け取りました。")
         return None
@@ -261,18 +262,31 @@ def add_recipe_to_notion(recipe_data: dict) -> str | None:
         error_code = e.code if hasattr(e, 'code') else "unknown"
         error_message = e.body.get("message", str(e)) if hasattr(e, 'body') and isinstance(e.body, dict) else str(e)
         logger.error(f"Notion API エラー ({error_code}): {error_message}")
-        
+
         # 特定のエラーに対する詳細情報
         if error_code == "validation_error":
             property_details = []
             if hasattr(e, 'body') and isinstance(e.body, dict):
                 for detail in e.body.get("errors", []):
                     property_details.append(f"{detail.get('path', ['unknown'])[-1]}: {detail.get('message', '不明なエラー')}")
-            
+
             if property_details:
                 logger.error(f"プロパティエラー詳細: {', '.join(property_details)}")
-        
-        return None
+
+        # ユーザー向けの分かりやすい日本語メッセージにマッピングして上流へ伝播
+        if error_code in ("unauthorized", "restricted_resource"):
+            user_msg = "Notionの認証に失敗しました。APIキーと、インテグレーションがデータベースに共有されているかを確認してください。"
+        elif error_code == "object_not_found":
+            user_msg = "Notionデータベースが見つかりません。データベースIDと、インテグレーションの接続設定を確認してください。"
+        elif error_code == "validation_error":
+            user_msg = "Notionデータベースのプロパティ設定と一致しませんでした。データベースの項目名・種類が仕様（SPEC.md）通りか確認してください。"
+        elif error_code == "rate_limited":
+            user_msg = "Notion APIのリクエスト制限に達しました。しばらく待ってから再試行してください。"
+        else:
+            user_msg = f"Notionへの登録中にエラーが発生しました（{error_code}）。"
+        raise RuntimeError(user_msg)
+    except RuntimeError:
+        raise  # ユーザー向けメッセージをそのまま上流へ伝播
     except Exception as e:
         logger.exception(f"Notionページ作成中に予期せぬエラーが発生しました: {e}")
         return None

@@ -105,8 +105,9 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
         str | None: 抽出されたレシピ情報のJSON文字列。エラー時はNone
     """
     if not api_key:
-        logger.error("エラー: Gemini APIキーが設定されていません。")
-        return None
+        msg = "サーバー側でGemini APIキーが設定されていません。管理者にお問い合わせください。"
+        logger.error(msg)
+        raise RuntimeError(msg)
 
     try:
         model = genai.GenerativeModel('gemini-flash-latest')
@@ -151,7 +152,9 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
                         logger.warning(f"RPM制限に達しました。{wait_sec}秒後にリトライします（{attempt+1}/{MAX_RETRIES}）")
                         time.sleep(wait_sec)
                     else:
-                        raise
+                        msg = "Gemini APIのリクエスト制限（1分あたりの上限）に繰り返し達しました。しばらく時間をおいてから再試行してください。"
+                        logger.error(msg)
+                        raise RuntimeError(msg)
                 else:
                     raise
 
@@ -184,11 +187,13 @@ def extract_recipe_from_text(transcript_text: str, youtube_url: str, channel_nam
                 logger.info("レシピ抽出成功")
                 return json_string
             except json.JSONDecodeError as json_err:
-                logger.error(f"エラー: Geminiの応答をJSONとしてパースできませんでした。{json_err}")
-                return None
+                msg = "AIが返したレシピデータを解析できませんでした。お手数ですが、もう一度お試しください。"
+                logger.error(f"{msg}（詳細: {json_err}）")
+                raise RuntimeError(msg)
         else:
-            logger.error("エラー: Geminiから有効な応答が得られませんでした。")
-            return None
+            msg = "AIからレシピ情報を取得できませんでした。動画に十分な情報が含まれていない可能性があります。"
+            logger.error(msg)
+            raise RuntimeError(msg)
 
     except RuntimeError:
         raise  # ユーザー向けメッセージをそのまま上流へ伝播
