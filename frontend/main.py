@@ -10,12 +10,13 @@ import os
 import uuid
 import time
 import logging
+from datetime import timedelta
 from functools import wraps
 from urllib.parse import urlparse
 
 # サードパーティライブラリ
 import requests
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
 from waitress import serve
 
 #----------------------------------------------
@@ -61,7 +62,10 @@ def _is_locked(ip: str) -> bool:
         return False
     if entry["lockout_until"] > time.time():
         return True
-    _failed_attempts.pop(ip, None)
+    # ロックアウトが「設定済みかつ期限切れ」の場合のみ記録をクリアする。
+    # （まだロック前で失敗カウント蓄積中=lockout_until が 0 のときは消さない）
+    if entry["lockout_until"] > 0:
+        _failed_attempts.pop(ip, None)
     return False
 
 def _record_failure(ip: str) -> None:
@@ -75,43 +79,43 @@ def _clear_failure(ip: str) -> None:
     _failed_attempts.pop(ip, None)
 
 def require_auth(f):
-    """Basic認証 + ロックアウトデコレータ"""
+    """セッションベースの認証デコレータ（未認証はログイン画面へ誘導）"""
     @wraps(f)
     def decorated(*args, **kwargs):
-        ip = _get_client_ip()
-
-        if _is_locked(ip):
-            remaining = int(_failed_attempts[ip]["lockout_until"] - time.time())
-            return Response(
-                f"アクセスがロックされています。あと {remaining} 秒後に再試行してください。",
-                403,
-                {"Content-Type": "text/plain; charset=utf-8"}
-            )
-
-        auth = request.authorization
-        if auth and auth.username == AUTH_USERNAME and auth.password == AUTH_PASSWORD:
-            _clear_failure(ip)
+        if session.get('authenticated'):
             return f(*args, **kwargs)
 
-        _record_failure(ip)
-        if _is_locked(ip):
-            return Response(
-                f"ログインに {MAX_FAILED_ATTEMPTS} 回失敗しました。{LOCKOUT_DURATION // 60} 分間アクセスがロックされます。",
-                403,
-                {"Content-Type": "text/plain; charset=utf-8"}
-            )
+        # 未認証時: APIエンドポイントはJSONで401を返し、フロントJSが扱えるようにする
+        if request.path.startswith('/submit') or request.path.startswith('/status'):
+            return jsonify({
+                "status": "error",
+                "message": "セッションが切れました。お手数ですが再度ログインしてください。"
+            }), 401
 
-        return Response(
-            "認証が必要です",
-            401,
-            {"WWW-Authenticate": 'Basic realm="Recipe Cliper"'}
-        )
+        # 通常のページリクエストはログイン画面へリダイレクト
+        return redirect(url_for('login'))
     return decorated
 
 #----------------------------------------------
 # 4. Flaskアプリケーション初期化
 #----------------------------------------------
 app = Flask(__name__)
+
+# セッション（署名付きCookie）設定
+app.secret_key = os.environ.get('SECRET_KEY') or os.urandom(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    # HTTPS(Tailscale Funnel等)経由のアクセスを前提に Secure を付与。
+    # ローカルのhttpで検証したい場合は環境変数 SESSION_COOKIE_SECURE=false で無効化可能。
+    SESSION_COOKIE_SECURE=os.environ.get('SESSION_COOKIE_SECURE', 'true').lower() == 'true',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+)
+if not os.environ.get('SECRET_KEY'):
+    logger.warning(
+        "SECRET_KEY が未設定のため一時キーを使用します。"
+        "再起動でログインセッションが無効化されるため、.env に SECRET_KEY を設定することを推奨します。"
+    )
 
 #----------------------------------------------
 # 5. ヘルパー関数
@@ -213,6 +217,56 @@ def check_task_status(task_id):
 #----------------------------------------------
 # 6. ルート定義
 #----------------------------------------------
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """ログイン画面の表示と認証処理（HTMLフォーム＋セッション）"""
+    # 既にログイン済みならトップへ
+    if session.get('authenticated'):
+        return redirect(url_for('index'))
+
+    ip = _get_client_ip()
+
+    if request.method == 'POST':
+        # ロックアウト中はログイン処理を行わない
+        if _is_locked(ip):
+            remaining = int(_failed_attempts[ip]["lockout_until"] - time.time())
+            return render_template(
+                'login.html',
+                error=f"アクセスがロックされています。あと {remaining} 秒後に再試行してください。"
+            ), 403
+
+        username = request.form.get('username', '')
+        password = request.form.get('password', '')
+
+        if AUTH_USERNAME and username == AUTH_USERNAME and password == AUTH_PASSWORD:
+            _clear_failure(ip)
+            session['authenticated'] = True
+            session.permanent = True
+            logger.info(f"[Auth] ログイン成功 (IP: {ip})")
+            return redirect(url_for('index'))
+
+        # 認証失敗
+        _record_failure(ip)
+        logger.warning(f"[Auth] ログイン失敗 (IP: {ip})")
+        if _is_locked(ip):
+            return render_template(
+                'login.html',
+                error=f"ログインに {MAX_FAILED_ATTEMPTS} 回失敗しました。{LOCKOUT_DURATION // 60} 分間アクセスがロックされます。"
+            ), 403
+        return render_template(
+            'login.html',
+            error="ユーザー名またはパスワードが正しくありません。"
+        ), 401
+
+    # GET: ログインフォームを表示
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """ログアウト（セッション破棄）"""
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/')
 @require_auth
 def index():

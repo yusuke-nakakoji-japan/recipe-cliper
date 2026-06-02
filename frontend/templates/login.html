@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ログイン - RecipeCliper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <style>
+        .login-main { max-width: 420px; margin: 0 auto; }
+        .login-form .form-group { margin-bottom: 1.2rem; }
+        .login-form input {
+            width: 100%;
+            padding: 0.85rem;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+        .login-form input:focus {
+            border-color: var(--primary-color);
+            outline: none;
+        }
+        .login-form button {
+            width: 100%;
+            border-radius: 8px;
+        }
+        .login-error {
+            background-color: rgba(255, 82, 82, 0.08);
+            border: 1px solid rgba(255, 82, 82, 0.3);
+            color: var(--error-color);
+            padding: 0.8rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.2rem;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <span class="logo-icon">✂️</span>
+                <h1>Recipe<span class="accent">Cliper</span></h1>
+            </div>
+            <p class="subtitle">ログインしてください</p>
+        </header>
+
+        <main class="login-main">
+            {% if error %}
+            <div class="login-error">{{ error }}</div>
+            {% endif %}
+            <form class="login-form" method="post" action="{{ url_for('login') }}">
+                <div class="form-group">
+                    <label for="username">ユーザー名</label>
+                    <input type="text" id="username" name="username"
+                           autocomplete="username" autocapitalize="none"
+                           autocorrect="off" spellcheck="false" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label for="password">パスワード</label>
+                    <input type="password" id="password" name="password"
+                           autocomplete="current-password" required>
+                </div>
+                <button type="submit">ログイン</button>
+            </form>
+        </main>
+
+        <footer>
+            <p>&copy; RecipeCliper</p>
+        </footer>
+    </div>
+</body>
+</html>
